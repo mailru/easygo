@@ -8,8 +8,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// EpollEvent represents epoll events configuration bit mask.
 type EpollEvent uint32
 
+// EpollEvents that are mapped to epoll_event.events possible values.
 const (
 	EPOLLIN      EpollEvent = unix.EPOLLIN
 	EPOLLOUT                = unix.EPOLLOUT
@@ -20,9 +22,12 @@ const (
 	EPOLLET                 = unix.EPOLLET
 	EPOLLONESHOT            = unix.EPOLLONESHOT
 
-	EPOLLCLOSE = 0x20 // Is triggered on epoll close.
+	// EPOLLCLOSED is a special EpollEvent value the receipt of which means
+	// that the epoll instance is closed.
+	EPOLLCLOSED = 0x20
 )
 
+// String returns a string representation of EpollEvent.
 func (evt EpollEvent) String() (str string) {
 	name := func(event EpollEvent, name string) {
 		if evt&event == 0 {
@@ -42,27 +47,19 @@ func (evt EpollEvent) String() (str string) {
 	name(EPOLLHUP, "EPOLLHUP")
 	name(EPOLLET, "EPOLLET")
 	name(EPOLLONESHOT, "EPOLLONESHOT")
-	name(EPOLLCLOSE, "EPOLLCLOSE")
+	name(EPOLLCLOSED, "EPOLLCLOSED")
 
 	return
 }
-
-const (
-	maxEventsBegin = 1024
-	maxEventsStop  = 32768
-)
-
-// closeBytes used for writing to eventfd.
-var closeBytes = []byte{1, 0, 0, 0, 0, 0, 0, 0}
 
 // Epoll represents single epoll instance.
 type Epoll struct {
 	mu sync.RWMutex
 
-	fd     int
-	efd    int
-	closed bool
-	done   chan struct{}
+	fd       int
+	eventFd  int
+	closed   bool
+	waitDone chan struct{}
 
 	callbacks map[int]func(EpollEvent)
 }
@@ -82,25 +79,25 @@ func EpollCreate(c *Config) (*Epoll, error) {
 	if errno != 0 {
 		return nil, errno
 	}
-	efd := int(r0)
+	eventFd := int(r0)
 
 	// Set finalizer for write end of socket pair to avoid data races when
 	// closing Epoll instance and EBADF errors on writing ctl bytes from callers.
-	err = unix.EpollCtl(fd, unix.EPOLL_CTL_ADD, efd, &unix.EpollEvent{
+	err = unix.EpollCtl(fd, unix.EPOLL_CTL_ADD, eventFd, &unix.EpollEvent{
 		Events: unix.EPOLLIN,
-		Fd:     int32(efd),
+		Fd:     int32(eventFd),
 	})
 	if err != nil {
 		unix.Close(fd)
-		unix.Close(efd)
+		unix.Close(eventFd)
 		return nil, err
 	}
 
 	ep := &Epoll{
 		fd:        fd,
-		efd:       efd,
+		eventFd:   eventFd,
 		callbacks: make(map[int]func(EpollEvent)),
-		done:      make(chan struct{}),
+		waitDone:  make(chan struct{}),
 	}
 
 	// Run wait loop.
@@ -109,36 +106,46 @@ func EpollCreate(c *Config) (*Epoll, error) {
 	return ep, nil
 }
 
+// closeBytes used for writing to eventfd.
+var closeBytes = []byte{1, 0, 0, 0, 0, 0, 0, 0}
+
 // Close stops wait loop and closes all underlying resources.
-func (w *Epoll) Close() (err error) {
-	w.mu.Lock()
+func (ep *Epoll) Close() (err error) {
+	ep.mu.Lock()
 	{
-		if w.closed {
-			w.mu.Unlock()
+		if ep.closed {
+			ep.mu.Unlock()
 			return ErrClosed
 		}
-		w.closed = true
+		ep.closed = true
 
-		if _, err = unix.Write(w.efd, closeBytes); err != nil {
-			w.mu.Unlock()
+		if _, err = unix.Write(ep.eventFd, closeBytes); err != nil {
+			ep.mu.Unlock()
 			return
 		}
 	}
-	w.mu.Unlock()
+	ep.mu.Unlock()
 
-	<-w.done
+	<-ep.waitDone
 
-	if err = unix.Close(w.efd); err != nil {
+	if err = unix.Close(ep.eventFd); err != nil {
 		return
 	}
 
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	for key, cb := range w.callbacks {
+	ep.mu.Lock()
+	// Set callbacks to nil preventing long mu.Lock() hold.
+	// This could increase the speed of retreiving ErrClosed in other calls to
+	// current epoll instance.
+	// Setting callbacks to nil is safe here because no one should read after
+	// closed flag is true.
+	callbacks := ep.callbacks
+	ep.callbacks = nil
+	ep.mu.Unlock()
+
+	for _, cb := range callbacks {
 		if cb != nil {
-			cb(EPOLLCLOSE)
+			cb(EPOLLCLOSED)
 		}
-		delete(w.callbacks, key)
 	}
 
 	return
@@ -146,72 +153,77 @@ func (w *Epoll) Close() (err error) {
 
 // Add adds fd to epoll set with given events.
 // Callback will be called on each received event from epoll.
-// Note that EPOLLCLOSE is triggered for every cb when epoll closed.
-func (w *Epoll) Add(fd int, events EpollEvent, cb func(EpollEvent)) (err error) {
+// Note that EPOLLCLOSED is triggered for every cb when epoll closed.
+func (ep *Epoll) Add(fd int, events EpollEvent, cb func(EpollEvent)) (err error) {
 	ev := &unix.EpollEvent{
 		Events: uint32(events),
 		Fd:     int32(fd),
 	}
 
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
 
-	if w.closed {
+	if ep.closed {
 		return ErrClosed
 	}
-	if _, has := w.callbacks[fd]; has {
+	if _, has := ep.callbacks[fd]; has {
 		return ErrRegistered
 	}
-	w.callbacks[fd] = cb
+	ep.callbacks[fd] = cb
 
-	return w.sendCtl(fd, unix.EPOLL_CTL_ADD, ev)
+	return ep.sendCtl(fd, unix.EPOLL_CTL_ADD, ev)
 }
 
 // Del removes fd from epoll set.
-func (w *Epoll) Del(fd int) (err error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func (ep *Epoll) Del(fd int) (err error) {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
 
-	delete(w.callbacks, fd)
+	delete(ep.callbacks, fd)
 
-	return w.sendCtl(fd, unix.EPOLL_CTL_DEL, nil)
+	return ep.sendCtl(fd, unix.EPOLL_CTL_DEL, nil)
 }
 
 // Mod sets to listen events on fd.
-func (w *Epoll) Mod(fd int, events EpollEvent) (err error) {
+func (ep *Epoll) Mod(fd int, events EpollEvent) (err error) {
 	ev := &unix.EpollEvent{
 		Events: uint32(events),
 		Fd:     int32(fd),
 	}
 
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+	ep.mu.RLock()
+	defer ep.mu.RUnlock()
 
-	return w.sendCtl(fd, unix.EPOLL_CTL_MOD, ev)
+	return ep.sendCtl(fd, unix.EPOLL_CTL_MOD, ev)
 }
 
 // sendCtl checks that epoll is not closed and  makes EpollCtl call.
 // Read or write mutex should be held.
-func (w *Epoll) sendCtl(fd int, op int, ev *unix.EpollEvent) error {
-	if w.closed {
+func (ep *Epoll) sendCtl(fd int, op int, ev *unix.EpollEvent) error {
+	if ep.closed {
 		return ErrClosed
 	}
-	return unix.EpollCtl(w.fd, op, fd, ev)
+	return unix.EpollCtl(ep.fd, op, fd, ev)
 }
 
-func (w *Epoll) wait(onError func(error)) {
+const (
+	maxWaitEventsBegin = 1024
+	maxWaitEventsStop  = 32768
+)
+
+func (ep *Epoll) wait(onError func(error)) {
 	defer func() {
-		if err := unix.Close(w.fd); err != nil {
+		if err := unix.Close(ep.fd); err != nil {
 			onError(err)
 		}
-		close(w.done)
+		close(ep.waitDone)
 	}()
 
-	events := make([]unix.EpollEvent, maxEventsBegin)
-	callbacks := make([]func(EpollEvent), 0, maxEventsBegin)
+	events := make([]unix.EpollEvent, maxWaitEventsBegin)
+	callbacks := make([]func(EpollEvent), 0, maxWaitEventsBegin)
 
 	for {
-		n, err := unix.EpollWait(w.fd, events, -1)
+		n, err := unix.EpollWait(ep.fd, events, -1)
 		if err != nil {
 			if temporaryErr(err) {
 				continue
@@ -222,16 +234,16 @@ func (w *Epoll) wait(onError func(error)) {
 
 		callbacks = callbacks[:n]
 
-		w.mu.RLock()
+		ep.mu.RLock()
 		for i := 0; i < n; i++ {
 			fd := int(events[i].Fd)
-			if fd == w.efd { // signal to close
-				w.mu.RUnlock()
+			if fd == ep.eventFd { // signal to close
+				ep.mu.RUnlock()
 				return
 			}
-			callbacks[i] = w.callbacks[fd]
+			callbacks[i] = ep.callbacks[fd]
 		}
-		w.mu.RUnlock()
+		ep.mu.RUnlock()
 
 		for i := 0; i < n; i++ {
 			if cb := callbacks[i]; cb != nil {
@@ -240,7 +252,7 @@ func (w *Epoll) wait(onError func(error)) {
 			}
 		}
 
-		if n == len(events) && n*2 <= maxEventsStop {
+		if n == len(events) && n*2 <= maxWaitEventsStop {
 			events = make([]unix.EpollEvent, n*2)
 			callbacks = make([]func(EpollEvent), 0, n*2)
 		}

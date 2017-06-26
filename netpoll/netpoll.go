@@ -6,23 +6,37 @@ import (
 )
 
 var (
-	ErrNotFiler   = fmt.Errorf("could not get file descriptor")
-	ErrClosed     = fmt.Errorf("poller instance is closed")
-	ErrRegistered = fmt.Errorf("file descriptor is already registered in netpoll")
+	// ErrNotFiler is returned by Handle* functions to indicate that given
+	// net.Conn does not provide access to its file descriptor.
+	ErrNotFiler = fmt.Errorf("could not get file descriptor")
+
+	// ErrClosed is returned by Poller methods to indicate that instance is
+	// closed and operation could not be processed.
+	ErrClosed = fmt.Errorf("poller instance is closed")
+
+	// ErrRegistered is returned by Poller Start() method to indicate that
+	// connection with the same underlying file descriptor is already
+	// registered inside instance.
+	ErrRegistered = fmt.Errorf("file descriptor is already registered in poller instance")
 )
 
+// Mode represents netpoll configuration bit mask.
 type Mode uint8
 
+// Mode values to be passed to Handle* functions and which could be received as
+// an agrument to CallbackFn.
 const (
 	ModeRead Mode = 1 << iota
 	ModeWrite
-
 	ModeOneShot
 	ModeEdgeTriggered
 
+	// ModeClosed is a special Mode value the receipt of which means that the
+	// Poller instance is closed.
 	ModeClosed
 )
 
+// String returns a string representation of Mode.
 func (m Mode) String() (str string) {
 	name := func(mode Mode, name string) {
 		if m&mode == 0 {
@@ -43,6 +57,8 @@ func (m Mode) String() (str string) {
 	return
 }
 
+// Poller describes an object that implements logic of polling connections for
+// i/o events such as availability of read() or write() operations.
 type Poller interface {
 	// Start adds desc to the observation list.
 	//
@@ -72,8 +88,11 @@ type Poller interface {
 	Resume(*Desc) error
 }
 
+// CallbackFn is a function that will be called on kernel i/o event
+// notification.
 type CallbackFn func(Mode)
 
+// Config contains options for Poller configuration.
 type Config struct {
 	OnError func(error)
 }
@@ -83,11 +102,11 @@ func (c *Config) withDefaults() (config Config) {
 		config = *c
 	}
 	if config.OnError == nil {
-		config.OnError = DefaultErrorHandler
+		config.OnError = defaultErrorHandler
 	}
 	return config
 }
 
-func DefaultErrorHandler(err error) {
+func defaultErrorHandler(err error) {
 	log.Printf("[netpoll] error: %s", err)
 }
