@@ -23,25 +23,27 @@ const (
 	EPOLLCLOSE = 0x20 // Is triggered on epoll close.
 )
 
-func (e EpollEvent) String() (ret string) {
-	label := func(s *string, t EpollEvent, l string) {
-		if e&t == 0 {
+func (evt EpollEvent) String() (str string) {
+	name := func(event EpollEvent, name string) {
+		if evt&event == 0 {
 			return
 		}
-		if *s != "" {
-			l = " | " + l
+		if str != "" {
+			str += "|"
 		}
-		*s += l
+		str += name
 	}
-	label(&ret, EPOLLIN, "EPOLLIN")
-	label(&ret, EPOLLOUT, "EPOLLOUT")
-	label(&ret, EPOLLRDHUP, "EPOLLRDHUP")
-	label(&ret, EPOLLPRI, "EPOLLPRI")
-	label(&ret, EPOLLERR, "EPOLLERR")
-	label(&ret, EPOLLHUP, "EPOLLHUP")
-	label(&ret, EPOLLET, "EPOLLET")
-	label(&ret, EPOLLONESHOT, "EPOLLONESHOT")
-	label(&ret, EPOLLCLOSE, "EPOLLCLOSE")
+
+	name(EPOLLIN, "EPOLLIN")
+	name(EPOLLOUT, "EPOLLOUT")
+	name(EPOLLRDHUP, "EPOLLRDHUP")
+	name(EPOLLPRI, "EPOLLPRI")
+	name(EPOLLERR, "EPOLLERR")
+	name(EPOLLHUP, "EPOLLHUP")
+	name(EPOLLET, "EPOLLET")
+	name(EPOLLONESHOT, "EPOLLONESHOT")
+	name(EPOLLCLOSE, "EPOLLCLOSE")
+
 	return
 }
 

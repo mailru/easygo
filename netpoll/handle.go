@@ -28,8 +28,15 @@ func (h *Desc) fd() int {
 	return int(h.file.Fd())
 }
 
+func HandleRead(conn net.Conn) (*Desc, error) {
+	return Handle(conn, ModeRead|ModeOneShot)
+}
+
+func HandleWrite(conn net.Conn) (*Desc, error) {
+	return Handle(conn, ModeWrite)
+}
+
 // Handle creates new Handle with given conn and events.
-// Note that EPOLLONESHOT is always added to events.
 // Returned handle could be used as argument to Start, Resume and Stop methods.
 func Handle(conn net.Conn, mode Mode) (*Desc, error) {
 	filer, ok := conn.(Filer)

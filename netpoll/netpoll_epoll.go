@@ -22,13 +22,13 @@ func (ep Epoller) Start(desc *Desc, cb CallbackFn) error {
 		func(events EpollEvent) {
 			var mode Mode
 			if events&(EPOLLIN|EPOLLRDHUP|EPOLLHUP|EPOLLERR) != 0 {
-				mode |= Read
+				mode |= ModeRead
 			}
 			if events&(EPOLLOUT|EPOLLHUP|EPOLLERR) != 0 {
-				mode |= Write
+				mode |= ModeWrite
 			}
 			if events&(EPOLLCLOSE) != 0 {
-				mode |= Close
+				mode |= ModeClosed
 			}
 
 			cb(mode)
@@ -45,16 +45,16 @@ func (ep Epoller) Resume(desc *Desc) error {
 }
 
 func modeToEvent(mode Mode) (events EpollEvent) {
-	if mode&Read != 0 {
+	if mode&ModeRead != 0 {
 		events |= EPOLLIN | EPOLLRDHUP
 	}
-	if mode&Write != 0 {
+	if mode&ModeWrite != 0 {
 		events |= EPOLLOUT
 	}
-	if mode&OneShot != 0 {
+	if mode&ModeOneShot != 0 {
 		events |= EPOLLONESHOT
 	}
-	if mode&EdgeTriggered != 0 {
+	if mode&ModeEdgeTriggered != 0 {
 		events |= EPOLLET
 	}
 	return events

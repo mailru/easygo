@@ -14,12 +14,34 @@ var (
 type Mode uint8
 
 const (
-	Read Mode = 1 << iota >> 1
-	Write
-	Close
-	OneShot
-	EdgeTriggered
+	ModeRead Mode = 1 << iota
+	ModeWrite
+
+	ModeOneShot
+	ModeEdgeTriggered
+
+	ModeClosed
 )
+
+func (m Mode) String() (str string) {
+	name := func(mode Mode, name string) {
+		if m&mode == 0 {
+			return
+		}
+		if str != "" {
+			str += "|"
+		}
+		str += name
+	}
+
+	name(ModeRead, "ModeRead")
+	name(ModeWrite, "ModeWrite")
+	name(ModeClosed, "ModeClosed")
+	name(ModeOneShot, "ModeOneShot")
+	name(ModeEdgeTriggered, "ModeEdgeTriggered")
+
+	return
+}
 
 type Poller interface {
 	// Start adds desc to the observation list.

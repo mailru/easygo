@@ -177,14 +177,15 @@ func RunEchoServer(tb testing.TB) net.Listener {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
-				if strings.Contains(err.Error(), "closed network") {
+				if strings.Contains(err.Error(), "use of closed network connection") {
 					// Server closed.
 					return
 				}
+
 				tb.Fatal(err)
 			}
 			go func() {
-				if _, err := io.Copy(conn, conn); err != io.EOF {
+				if _, err := io.Copy(conn, conn); err != nil && err != io.EOF {
 					tb.Fatal(err)
 				}
 			}()

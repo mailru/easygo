@@ -5,9 +5,9 @@ package netpoll
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,12 +35,22 @@ func TestPoller(t *testing.T) {
 		received = make([]byte, 0, len(data))
 	)
 
-	desc, err := Handle(conn, Read)
+	desc, err := Handle(conn, ModeRead|ModeOneShot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = poller.Start(desc, func(Mode) {
-		bts, err := ioutil.ReadAll(conn)
+
+	var (
+		fmu   sync.Mutex
+		fired []Mode
+	)
+	err = poller.Start(desc, func(mode Mode) {
+		fmu.Lock()
+		fired = append(fired, mode)
+		fmu.Unlock()
+
+		bts := make([]byte, 16)
+		n, err := conn.Read(bts)
 		switch {
 		case err == io.EOF:
 			go func() {
@@ -54,7 +64,7 @@ func TestPoller(t *testing.T) {
 			t.Fatal(err)
 
 		default:
-			received = append(received, bts...)
+			received = append(received, bts[:n]...)
 			go poller.Resume(desc)
 		}
 	})
@@ -67,7 +77,7 @@ func TestPoller(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(time.Second)
 	}
 
 	if err = unix.Close(w); err != nil {
@@ -76,8 +86,21 @@ func TestPoller(t *testing.T) {
 
 	<-done
 
+	if count, exp := len(fired), len(data)+1; count != exp { // expect +1 for EPOLLRDHUP or EPOLLHUP
+		t.Errorf("callback called %d times (%v); want %d", count, fired, exp)
+		return
+	}
+
+	if m := fired[len(fired)-1]; m&ModeRead == 0 || m&ModeWrite == 0 {
+		t.Errorf("last callback call was made with %s; want %s", m, ModeRead|ModeWrite)
+	}
+	for i, m := range fired[:len(fired)-1] {
+		if m != ModeRead {
+			t.Errorf("callback call #%d was made with %s; want %s", i, m, ModeRead)
+		}
+	}
 	if !bytes.Equal(data, received) {
-		t.Fatalf("bytes are not equal:\ngot:  %v\nwant: %v\n", received, data)
+		t.Errorf("bytes are not equal:\ngot:  %v\nwant: %v\n", received, data)
 	}
 }
 
