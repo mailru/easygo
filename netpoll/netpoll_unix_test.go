@@ -72,12 +72,13 @@ func TestPoller(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Write data by a single byte.
 	for i := 0; i < len(data); i++ {
 		_, err = unix.Write(w, data[i:i+1])
 		if err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond)
 	}
 
 	if err = unix.Close(w); err != nil {
