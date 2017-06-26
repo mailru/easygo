@@ -98,7 +98,7 @@ func TestEpollWait(t *testing.T) {
 
 	accept := func(fd int) func(EpollEvent) {
 		return func(evt EpollEvent) {
-			if evt&EPOLLCLOSE != 0 {
+			if evt&EPOLLCLOSED != 0 {
 				return
 			}
 			conn, _, err := unix.Accept(fd)
