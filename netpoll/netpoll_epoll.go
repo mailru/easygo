@@ -22,6 +22,7 @@ func (ep Epoller) Start(desc *Desc, cb CallbackFn) error {
 	return ep.Add(desc.fd(), modeToEvent(desc.mode),
 		func(events EpollEvent) {
 			var mode Mode
+
 			if events&EPOLLHUP != 0 {
 				mode |= ModeHup
 			}

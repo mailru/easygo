@@ -91,8 +91,8 @@ func TestPoller(t *testing.T) {
 		return
 	}
 
-	if m := fired[len(fired)-1]; m&ModeRead == 0 || m&ModeWrite == 0 {
-		t.Errorf("last callback call was made with %s; want %s", m, ModeRead|ModeWrite)
+	if last, want := fired[len(fired)-1], ModeRead|ModeHup|ModeReadHup; last != want {
+		t.Errorf("last callback call was made with %s; want %s", last, want)
 	}
 	for i, m := range fired[:len(fired)-1] {
 		if m != ModeRead {
