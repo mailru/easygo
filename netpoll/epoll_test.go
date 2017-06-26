@@ -172,6 +172,7 @@ func listen(port int) (ln int, err error) {
 	return
 }
 
+// RunEchoServer starts tcp echo server.
 func RunEchoServer(tb *testing.TB) net.Listener {
 	ln, err := net.Listen("tcp", "localhost:")
 	if err != nil {
