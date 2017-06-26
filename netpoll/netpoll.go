@@ -54,9 +54,12 @@ func (m Mode) String() (str string) {
 
 	name(ModeRead, "ModeRead")
 	name(ModeWrite, "ModeWrite")
-	name(ModeClosed, "ModeClosed")
 	name(ModeOneShot, "ModeOneShot")
 	name(ModeEdgeTriggered, "ModeEdgeTriggered")
+	name(ModeReadHup, "ModeReadHup")
+	name(ModeHup, "ModeHup")
+	name(ModeErr, "ModeErr")
+	name(ModeClosed, "ModeClosed")
 
 	return
 }
