@@ -22,13 +22,22 @@ func (ep Epoller) Start(desc *Desc, cb CallbackFn) error {
 	return ep.Add(desc.fd(), modeToEvent(desc.mode),
 		func(events EpollEvent) {
 			var mode Mode
-			if events&(EPOLLIN|EPOLLRDHUP|EPOLLHUP|EPOLLERR) != 0 {
+			if events&EPOLLHUP != 0 {
+				mode |= ModeHup
+			}
+			if events&EPOLLRDHUP != 0 {
+				mode |= ModeReadHup
+			}
+			if events&EPOLLIN != 0 {
 				mode |= ModeRead
 			}
-			if events&(EPOLLOUT|EPOLLHUP|EPOLLERR) != 0 {
+			if events&EPOLLOUT != 0 {
 				mode |= ModeWrite
 			}
-			if events&(EPOLLCLOSED) != 0 {
+			if events&EPOLLERR != 0 {
+				mode |= ModeErr
+			}
+			if events&EPOLLCLOSED != 0 {
 				mode |= ModeClosed
 			}
 

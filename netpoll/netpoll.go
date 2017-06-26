@@ -31,6 +31,10 @@ const (
 	ModeOneShot
 	ModeEdgeTriggered
 
+	ModeReadHup
+	ModeHup
+	ModeErr
+
 	// ModeClosed is a special Mode value the receipt of which means that the
 	// Poller instance is closed.
 	ModeClosed
