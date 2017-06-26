@@ -13,12 +13,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func config(t *testing.T) *EpollConfig {
-	return &EpollConfig{
-		OnError: func(err error) { t.Fatal(err) },
-	}
-}
-
 func TestEpollCreate(t *testing.T) {
 	s, err := EpollCreate(config(t))
 	if err != nil {
@@ -57,12 +51,12 @@ func TestEpollDel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	f, err := conn.(filer).File()
+	f, err := conn.(Filer).File()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = s.Add(int(f.Fd()), EPOLLIN, func(events Event) {})
+	err = s.Add(int(f.Fd()), EPOLLIN, func(events EpollEvent) {})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,9 +78,9 @@ func TestEpollWait(t *testing.T) {
 	recv := &bytes.Buffer{}
 	done := make(chan struct{})
 
-	read := func(fd int) CallbackFn {
+	read := func(fd int) func(EpollEvent) {
 		var closed bool
-		return func(evt Event) {
+		return func(evt EpollEvent) {
 			var buf [1024]byte
 			for {
 				n, _ := unix.Read(fd, buf[:])
@@ -102,8 +96,8 @@ func TestEpollWait(t *testing.T) {
 		}
 	}
 
-	accept := func(fd int) CallbackFn {
-		return func(evt Event) {
+	accept := func(fd int) func(EpollEvent) {
+		return func(evt EpollEvent) {
 			if evt&EPOLLCLOSE != 0 {
 				return
 			}
@@ -173,7 +167,7 @@ func listen(port int) (ln int, err error) {
 }
 
 // RunEchoServer starts tcp echo server.
-func RunEchoServer(tb *testing.TB) net.Listener {
+func RunEchoServer(tb testing.TB) net.Listener {
 	ln, err := net.Listen("tcp", "localhost:")
 	if err != nil {
 		tb.Fatal(err)
