@@ -65,8 +65,7 @@ type Epoll struct {
 }
 
 // EpollCreate creates new epoll instance.
-// To start wait loop and be able to call {Add,Del,Mod} methods,
-// you should call Wait() before.
+// It starts the wait loop in separate gorotuine.
 func EpollCreate(c *Config) (*Epoll, error) {
 	config := c.withDefaults()
 
@@ -197,7 +196,7 @@ func (ep *Epoll) Mod(fd int, events EpollEvent) (err error) {
 	return ep.sendCtl(fd, unix.EPOLL_CTL_MOD, ev)
 }
 
-// sendCtl checks that epoll is not closed and  makes EpollCtl call.
+// sendCtl checks that epoll is not closed and makes EpollCtl call.
 // Read or write mutex should be held.
 func (ep *Epoll) sendCtl(fd int, op int, ev *unix.EpollEvent) error {
 	if ep.closed {
