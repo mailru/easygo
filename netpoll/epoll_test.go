@@ -69,78 +69,103 @@ func TestEpollDel(t *testing.T) {
 	}
 }
 
-func TestEpollWait(t *testing.T) {
+func TestEpollServer(t *testing.T) {
 	ep, err := EpollCreate(config(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	recv := &bytes.Buffer{}
-	done := make(chan struct{})
-
-	read := func(fd int) func(EpollEvent) {
-		var closed bool
-		return func(evt EpollEvent) {
-			var buf [1024]byte
-			for {
-				n, _ := unix.Read(fd, buf[:])
-				if n == 0 && !closed {
-					close(done)
-					closed = true
-				}
-				if n <= 0 {
-					break
-				}
-				recv.Write(buf[:n])
-			}
-		}
-	}
-
-	accept := func(fd int) func(EpollEvent) {
-		return func(evt EpollEvent) {
-			if evt&EPOLLCLOSED != 0 {
-				return
-			}
-			conn, _, err := unix.Accept(fd)
-			if err != nil {
-				t.Fatalf("could not accept: %s", err)
-			}
-			unix.SetNonblock(conn, true)
-			go ep.Add(conn, EPOLLIN, read(conn))
-		}
-	}
-
+	// Create listener on port 4444.
 	ln, err := listen(4444)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer unix.Close(ln)
 
-	ep.Add(ln, unix.EPOLLIN, accept(ln))
+	var received bytes.Buffer
+	done := make(chan struct{})
 
-	data := []byte("hello, epoll!")
+	// Add listener fd to epoll instance to know when there are new incoming
+	// connections.
+	ep.Add(ln, EPOLLIN, func(evt EpollEvent) {
+		if evt&EPOLLCLOSED != 0 {
+			return
+		}
 
-	conn, err := net.Dial("tcp", "127.0.0.1:4444")
+		// Accept new incoming connection.
+		conn, _, err := unix.Accept(ln)
+		if err != nil {
+			t.Fatalf("could not accept: %s", err)
+		}
+
+		// Socket must not block read() from it.
+		unix.SetNonblock(conn, true)
+
+		// Add connection fd to epoll instance to get notifications about
+		// available data.
+		ep.Add(conn, EPOLLIN|EPOLLET|EPOLLHUP|EPOLLRDHUP, func(evt EpollEvent) {
+			// If EPOLLRDHUP is supported, it will be triggered after conn
+			// close() or shutdown(). In older versions EPOLLHUP is triggered.
+			if evt&EPOLLCLOSED != 0 {
+				return
+			}
+
+			var buf [128]byte
+			for {
+				n, _ := unix.Read(conn, buf[:])
+				if n == 0 {
+					close(done)
+				}
+				if n <= 0 {
+					break
+				}
+				received.Write(buf[:n])
+			}
+		})
+	})
+
+	conn, err := dial(4444)
 	if err != nil {
-		t.Fatalf("could not dial: %s", err)
+		t.Fatal(err)
 	}
 
+	// Write some data bytes one by one to the conn.
+	data := []byte("hello, epoll!")
 	for i := 0; i < len(data); i++ {
-		if _, err := conn.Write(data[i : i+1]); err != nil {
+		if _, err := unix.Write(conn, data[i:i+1]); err != nil {
 			t.Fatalf("could not make %d-th write (%v): %s", i, string(data[i]), err)
 		}
 		time.Sleep(time.Millisecond)
 	}
-	conn.Close()
 
+	unix.Close(conn)
 	<-done
 
 	if err = ep.Close(); err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(recv.Bytes(), data) {
+	if !bytes.Equal(received.Bytes(), data) {
 		t.Errorf("bytes not equal")
 	}
+}
+
+func dial(port int) (conn int, err error) {
+	conn, err = unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+	if err != nil {
+		return
+	}
+
+	addr := &unix.SockaddrInet4{
+		Port: port,
+		Addr: [4]byte{0x7f, 0, 0, 1}, // 127.0.0.1
+	}
+
+	err = unix.Connect(conn, addr)
+	if err == nil {
+		err = unix.SetNonblock(conn, true)
+	}
+
+	return
 }
 
 func listen(port int) (ln int, err error) {
@@ -157,12 +182,12 @@ func listen(port int) (ln int, err error) {
 		Port: port,
 		Addr: [4]byte{0x7f, 0, 0, 1}, // 127.0.0.1
 	}
+
 	if err = unix.Bind(ln, addr); err != nil {
 		return
 	}
-	if err = unix.Listen(ln, 4); err != nil {
-		return
-	}
+	err = unix.Listen(ln, 4)
+
 	return
 }
 
