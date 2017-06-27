@@ -93,9 +93,9 @@ const (
 )
 
 // String returns a string representation of Event.
-func (m Event) String() (str string) {
-	name := func(mode Event, name string) {
-		if m&mode == 0 {
+func (ev Event) String() (str string) {
+	name := func(event Event, name string) {
+		if ev&event == 0 {
 			return
 		}
 		if str != "" {
@@ -121,7 +121,7 @@ func (m Event) String() (str string) {
 type Poller interface {
 	// Start adds desc to the observation list.
 	//
-	// Note that if desc was configured with OneShot mode on, then poller will
+	// Note that if desc was configured with OneShot event, then poller will
 	// remove it from its observation list. If you will be interested in
 	// receiving events after the callback, call Resume(desc).
 	//
