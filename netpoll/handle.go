@@ -6,8 +6,8 @@ import (
 	"syscall"
 )
 
-// Filer describes an object that has ability to return os.File.
-type Filer interface {
+// filer describes an object that has ability to return os.File.
+type filer interface {
 	// File returns a copy of object's file descriptor.
 	File() (*os.File, error)
 }
@@ -61,13 +61,13 @@ func HandleReadWrite(conn net.Conn) (*Desc, error) {
 // Returned descriptor could be used as argument to Start(), Resume() and
 // Stop() methods of some Poller implementation.
 func Handle(conn net.Conn, event Event) (*Desc, error) {
-	filer, ok := conn.(Filer)
+	f, ok := conn.(filer)
 	if !ok {
 		return nil, ErrNotFiler
 	}
 
 	// Get a copy of fd.
-	file, err := filer.File()
+	file, err := f.File()
 	if err != nil {
 		return nil, err
 	}
