@@ -23,21 +23,26 @@ var (
 // Mode represents netpoll configuration bit mask.
 type Mode uint8
 
-// Mode values to be passed to Handle* functions and which could be received as
-// an agrument to CallbackFn.
+// Mode values that denote the type of events that caller want to receive.
 const (
-	ModeRead Mode = 1 << iota
-	ModeWrite
-	ModeOneShot
-	ModeEdgeTriggered
+	ModeRead  Mode = 0x1
+	ModeWrite      = 0x2
+)
 
-	ModeReadHup
-	ModeHup
-	ModeErr
+// Mode values that configure the Poller's behavior.
+const (
+	ModeOneShot       Mode = 0x4
+	ModeEdgeTriggered      = 0x8
+)
 
+// Mode values that could be passed to CallbackFn as informational event.
+const (
+	ModeReadHup Mode = 0x10
+	ModeHup          = 0x20
+	ModeErr          = 0x40
 	// ModeClosed is a special Mode value the receipt of which means that the
 	// Poller instance is closed.
-	ModeClosed
+	ModeClosed = 0x80
 )
 
 // String returns a string representation of Mode.
@@ -87,7 +92,7 @@ type Poller interface {
 
 	// Resume enables observation of desc.
 	//
-	// It is useful when desc was configured with OneShot mode on.
+	// It is useful when desc was configured with ModeOneShot.
 	// It should be called only after Start().
 	//
 	// Note that if there no need to observe desc anymore, you should call

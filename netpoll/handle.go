@@ -39,9 +39,9 @@ func Must(desc *Desc, err error) *Desc {
 }
 
 // HandleRead creates read descriptor for further use in Poller methods.
-// It is the same as Handle(conn, ModeRead|ModeOneShot).
+// It is the same as Handle(conn, ModeRead|ModeEdgeTriggered).
 func HandleRead(conn net.Conn) (*Desc, error) {
-	return Handle(conn, ModeRead|ModeOneShot)
+	return Handle(conn, ModeRead|ModeEdgeTriggered)
 }
 
 // HandleWrite creates write descriptor for further use in Poller methods.
@@ -52,9 +52,9 @@ func HandleWrite(conn net.Conn) (*Desc, error) {
 
 // HandleReadWrite creates read and write descriptor for further use in Poller
 // methods.
-// It is the same as Handle(conn, ModeRead|ModeWrite|ModeOneShot).
+// It is the same as Handle(conn, ModeRead|ModeWrite|ModeEdgeTriggered).
 func HandleReadWrite(conn net.Conn) (*Desc, error) {
-	return Handle(conn, ModeRead|ModeWrite|ModeOneShot)
+	return Handle(conn, ModeRead|ModeWrite|ModeEdgeTriggered)
 }
 
 // Handle creates new Desc with given conn and mode.
