@@ -64,9 +64,24 @@ type Epoll struct {
 	callbacks map[int]func(EpollEvent)
 }
 
+// EpollConfig contains options for Epoll instance configuration.
+type EpollConfig struct {
+	OnError func(error)
+}
+
+func (c *EpollConfig) withDefaults() (config EpollConfig) {
+	if c != nil {
+		config = *c
+	}
+	if config.OnError == nil {
+		config.OnError = defaultErrorHandler
+	}
+	return config
+}
+
 // EpollCreate creates new epoll instance.
 // It starts the wait loop in separate gorotuine.
-func EpollCreate(c *Config) (*Epoll, error) {
+func EpollCreate(c *EpollConfig) (*Epoll, error) {
 	config := c.withDefaults()
 
 	fd, err := unix.EpollCreate1(0)

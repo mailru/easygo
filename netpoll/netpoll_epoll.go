@@ -4,71 +4,75 @@ package netpoll
 
 // New creates new epoll-based Poller instance with given config.
 func New(c *Config) (Poller, error) {
-	epoll, err := EpollCreate(c)
+	cfg := c.withDefaults()
+
+	epoll, err := EpollCreate(&EpollConfig{
+		OnError: cfg.OnError,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return Epoller{epoll}, nil
+	return epoller{epoll}, nil
 }
 
-// Epoller implements Poller interface.
-type Epoller struct {
+// epoller implements Poller interface.
+type epoller struct {
 	*Epoll
 }
 
 // Start implements Poller.Start() method.
-func (ep Epoller) Start(desc *Desc, cb CallbackFn) error {
-	return ep.Add(desc.fd(), modeToEvent(desc.mode),
-		func(events EpollEvent) {
-			var mode Mode
+func (ep epoller) Start(desc *Desc, cb CallbackFn) error {
+	return ep.Add(desc.fd(), toEpollEvent(desc.event),
+		func(ep EpollEvent) {
+			var event Event
 
-			if events&EPOLLHUP != 0 {
-				mode |= ModeHup
+			if ep&EPOLLHUP != 0 {
+				event |= EventHup
 			}
-			if events&EPOLLRDHUP != 0 {
-				mode |= ModeReadHup
+			if ep&EPOLLRDHUP != 0 {
+				event |= EventReadHup
 			}
-			if events&EPOLLIN != 0 {
-				mode |= ModeRead
+			if ep&EPOLLIN != 0 {
+				event |= EventRead
 			}
-			if events&EPOLLOUT != 0 {
-				mode |= ModeWrite
+			if ep&EPOLLOUT != 0 {
+				event |= EventWrite
 			}
-			if events&EPOLLERR != 0 {
-				mode |= ModeErr
+			if ep&EPOLLERR != 0 {
+				event |= EventErr
 			}
-			if events&EPOLLCLOSED != 0 {
-				mode |= ModeClosed
+			if ep&EPOLLCLOSED != 0 {
+				event |= EventClosed
 			}
 
-			cb(mode)
+			cb(event)
 		},
 	)
 }
 
 // Stop implements Poller.Stop() method.
-func (ep Epoller) Stop(desc *Desc) error {
+func (ep epoller) Stop(desc *Desc) error {
 	return ep.Del(desc.fd())
 }
 
 // Resume implements Poller.Resume() method.
-func (ep Epoller) Resume(desc *Desc) error {
-	return ep.Mod(desc.fd(), modeToEvent(desc.mode))
+func (ep epoller) Resume(desc *Desc) error {
+	return ep.Mod(desc.fd(), toEpollEvent(desc.event))
 }
 
-func modeToEvent(mode Mode) (events EpollEvent) {
-	if mode&ModeRead != 0 {
-		events |= EPOLLIN | EPOLLRDHUP
+func toEpollEvent(event Event) (ep EpollEvent) {
+	if event&EventRead != 0 {
+		ep |= EPOLLIN | EPOLLRDHUP
 	}
-	if mode&ModeWrite != 0 {
-		events |= EPOLLOUT
+	if event&EventWrite != 0 {
+		ep |= EPOLLOUT
 	}
-	if mode&ModeOneShot != 0 {
-		events |= EPOLLONESHOT
+	if event&EventOneShot != 0 {
+		ep |= EPOLLONESHOT
 	}
-	if mode&ModeEdgeTriggered != 0 {
-		events |= EPOLLET
+	if event&EventEdgeTriggered != 0 {
+		ep |= EPOLLET
 	}
-	return events
+	return ep
 }

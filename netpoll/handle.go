@@ -15,8 +15,8 @@ type Filer interface {
 // Desc is a network connection within netpoll descriptor.
 // It's methods are not goroutine safe.
 type Desc struct {
-	file *os.File
-	mode Mode
+	file  *os.File
+	event Event
 }
 
 // Close closes underlying resources.
@@ -39,28 +39,28 @@ func Must(desc *Desc, err error) *Desc {
 }
 
 // HandleRead creates read descriptor for further use in Poller methods.
-// It is the same as Handle(conn, ModeRead|ModeEdgeTriggered).
+// It is the same as Handle(conn, EventRead|EventEdgeTriggered).
 func HandleRead(conn net.Conn) (*Desc, error) {
-	return Handle(conn, ModeRead|ModeEdgeTriggered)
+	return Handle(conn, EventRead|EventEdgeTriggered)
 }
 
 // HandleWrite creates write descriptor for further use in Poller methods.
-// It is the same as Handle(conn, ModeWrite).
+// It is the same as Handle(conn, EventWrite).
 func HandleWrite(conn net.Conn) (*Desc, error) {
-	return Handle(conn, ModeWrite)
+	return Handle(conn, EventWrite)
 }
 
 // HandleReadWrite creates read and write descriptor for further use in Poller
 // methods.
-// It is the same as Handle(conn, ModeRead|ModeWrite|ModeEdgeTriggered).
+// It is the same as Handle(conn, EventRead|EventWrite|EventEdgeTriggered).
 func HandleReadWrite(conn net.Conn) (*Desc, error) {
-	return Handle(conn, ModeRead|ModeWrite|ModeEdgeTriggered)
+	return Handle(conn, EventRead|EventWrite|EventEdgeTriggered)
 }
 
-// Handle creates new Desc with given conn and mode.
+// Handle creates new Desc with given conn and event.
 // Returned descriptor could be used as argument to Start(), Resume() and
 // Stop() methods of some Poller implementation.
-func Handle(conn net.Conn, mode Mode) (*Desc, error) {
+func Handle(conn net.Conn, event Event) (*Desc, error) {
 	filer, ok := conn.(Filer)
 	if !ok {
 		return nil, ErrNotFiler
@@ -83,7 +83,7 @@ func Handle(conn net.Conn, mode Mode) (*Desc, error) {
 	}
 
 	return &Desc{
-		file: file,
-		mode: mode,
+		file:  file,
+		event: event,
 	}, nil
 }

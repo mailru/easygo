@@ -35,18 +35,18 @@ func TestPoller(t *testing.T) {
 		received = make([]byte, 0, len(data))
 	)
 
-	desc, err := Handle(conn, ModeRead|ModeOneShot)
+	desc, err := Handle(conn, EventRead|EventOneShot)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var (
 		fmu   sync.Mutex
-		fired []Mode
+		fired []Event
 	)
-	err = poller.Start(desc, func(mode Mode) {
+	err = poller.Start(desc, func(event Event) {
 		fmu.Lock()
-		fired = append(fired, mode)
+		fired = append(fired, event)
 		fmu.Unlock()
 
 		bts := make([]byte, 16)
@@ -92,12 +92,12 @@ func TestPoller(t *testing.T) {
 		return
 	}
 
-	if last, want := fired[len(fired)-1], ModeRead|ModeHup|ModeReadHup; last != want {
+	if last, want := fired[len(fired)-1], EventRead|EventHup|EventReadHup; last != want {
 		t.Errorf("last callback call was made with %s; want %s", last, want)
 	}
 	for i, m := range fired[:len(fired)-1] {
-		if m != ModeRead {
-			t.Errorf("callback call #%d was made with %s; want %s", i, m, ModeRead)
+		if m != EventRead {
+			t.Errorf("callback call #%d was made with %s; want %s", i, m, EventRead)
 		}
 	}
 	if !bytes.Equal(data, received) {

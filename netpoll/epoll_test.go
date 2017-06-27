@@ -14,7 +14,7 @@ import (
 )
 
 func TestEpollCreate(t *testing.T) {
-	s, err := EpollCreate(config(t))
+	s, err := EpollCreate(epollConfig(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +24,7 @@ func TestEpollCreate(t *testing.T) {
 }
 
 func TestEpollAddClosed(t *testing.T) {
-	s, err := EpollCreate(config(t))
+	s, err := EpollCreate(epollConfig(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestEpollDel(t *testing.T) {
 	}
 	defer conn.Close()
 
-	s, err := EpollCreate(config(t))
+	s, err := EpollCreate(epollConfig(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +70,7 @@ func TestEpollDel(t *testing.T) {
 }
 
 func TestEpollServer(t *testing.T) {
-	ep, err := EpollCreate(config(t))
+	ep, err := EpollCreate(epollConfig(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,4 +217,12 @@ func RunEchoServer(tb testing.TB) net.Listener {
 		}
 	}()
 	return ln
+}
+
+func epollConfig(tb testing.TB) *EpollConfig {
+	return &EpollConfig{
+		OnError: func(err error) {
+			tb.Fatal(err)
+		},
+	}
 }

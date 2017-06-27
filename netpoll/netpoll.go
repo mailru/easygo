@@ -1,3 +1,49 @@
+/*
+Package netpoll provides a portable interface for network I/O event
+notification facility.
+
+Its API is intended for monitoring multiple file descriptors to see if I/O is
+possible on any of them. It supports edge-triggered and level-triggered
+interfaces.
+
+To get more info you could look at operating system API documentation of
+particular netpoll implementations:
+	- epoll on linux;
+	- kqueue on bsd;
+
+The Handle function creates netpoll.Desc for further use in Poller's methods:
+
+	desc, err := netpoll.Handle(conn, netpoll.EventRead | netpoll.EventEdgeTriggered)
+	if err != nil {
+		// handle error
+	}
+
+The Poller describes os-dependent network poller:
+
+	poller, err := netpoll.New(nil)
+	if err != nil {
+		// handle error
+	}
+
+	// Get netpoll descriptor with EventRead|EventEdgeTriggered.
+	desc := netpoll.Must(netpoll.HandleRead(conn))
+
+	poller.Start(desc, func(ev netpoll.Event) {
+		if ev&netpoll.EventReadHup != 0 {
+			poller.Stop(desc)
+			conn.Close()
+			return
+		}
+
+		_, err := ioutil.ReadAll(conn)
+		if err != nil {
+			// handle error
+		}
+	})
+
+Currently, Poller is implemented only for Linux.
+*/
+
 package netpoll
 
 import (
@@ -20,34 +66,35 @@ var (
 	ErrRegistered = fmt.Errorf("file descriptor is already registered in poller instance")
 )
 
-// Mode represents netpoll configuration bit mask.
-type Mode uint8
+// Event represents netpoll configuration bit mask.
+type Event uint8
 
-// Mode values that denote the type of events that caller want to receive.
+// Event values that denote the type of events that caller want to receive.
 const (
-	ModeRead  Mode = 0x1
-	ModeWrite      = 0x2
+	EventRead  Event = 0x1
+	EventWrite       = 0x2
 )
 
-// Mode values that configure the Poller's behavior.
+// Event values that configure the Poller's behavior.
 const (
-	ModeOneShot       Mode = 0x4
-	ModeEdgeTriggered      = 0x8
+	EventOneShot       Event = 0x4
+	EventEdgeTriggered       = 0x8
 )
 
-// Mode values that could be passed to CallbackFn as informational event.
+// Event values that could be passed to CallbackFn as additional information
+// event.
 const (
-	ModeReadHup Mode = 0x10
-	ModeHup          = 0x20
-	ModeErr          = 0x40
-	// ModeClosed is a special Mode value the receipt of which means that the
+	EventReadHup Event = 0x10
+	EventHup           = 0x20
+	EventErr           = 0x40
+	// EventClosed is a special Event value the receipt of which means that the
 	// Poller instance is closed.
-	ModeClosed = 0x80
+	EventClosed = 0x80
 )
 
-// String returns a string representation of Mode.
-func (m Mode) String() (str string) {
-	name := func(mode Mode, name string) {
+// String returns a string representation of Event.
+func (m Event) String() (str string) {
+	name := func(mode Event, name string) {
 		if m&mode == 0 {
 			return
 		}
@@ -57,14 +104,14 @@ func (m Mode) String() (str string) {
 		str += name
 	}
 
-	name(ModeRead, "ModeRead")
-	name(ModeWrite, "ModeWrite")
-	name(ModeOneShot, "ModeOneShot")
-	name(ModeEdgeTriggered, "ModeEdgeTriggered")
-	name(ModeReadHup, "ModeReadHup")
-	name(ModeHup, "ModeHup")
-	name(ModeErr, "ModeErr")
-	name(ModeClosed, "ModeClosed")
+	name(EventRead, "EventRead")
+	name(EventWrite, "EventWrite")
+	name(EventOneShot, "EventOneShot")
+	name(EventEdgeTriggered, "EventEdgeTriggered")
+	name(EventReadHup, "EventReadHup")
+	name(EventHup, "EventHup")
+	name(EventErr, "EventErr")
+	name(EventClosed, "EventClosed")
 
 	return
 }
@@ -92,7 +139,7 @@ type Poller interface {
 
 	// Resume enables observation of desc.
 	//
-	// It is useful when desc was configured with ModeOneShot.
+	// It is useful when desc was configured with EventOneShot.
 	// It should be called only after Start().
 	//
 	// Note that if there no need to observe desc anymore, you should call
@@ -102,7 +149,7 @@ type Poller interface {
 
 // CallbackFn is a function that will be called on kernel i/o event
 // notification.
-type CallbackFn func(Mode)
+type CallbackFn func(Event)
 
 // Config contains options for Poller configuration.
 type Config struct {
