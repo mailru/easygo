@@ -2,7 +2,7 @@
 
 package netpoll
 
-// New creates new instance of epoll with given config.
+// New creates new epoll-based Poller instance with given config.
 func New(c *Config) (Poller, error) {
 	epoll, err := EpollCreate(c)
 	if err != nil {
@@ -17,17 +17,28 @@ type Epoller struct {
 	*Epoll
 }
 
+// Start implements Poller.Start() method.
 func (ep Epoller) Start(desc *Desc, cb CallbackFn) error {
 	return ep.Add(desc.fd(), modeToEvent(desc.mode),
 		func(events EpollEvent) {
 			var mode Mode
-			if events&(EPOLLIN|EPOLLRDHUP|EPOLLHUP|EPOLLERR) != 0 {
+
+			if events&EPOLLHUP != 0 {
+				mode |= ModeHup
+			}
+			if events&EPOLLRDHUP != 0 {
+				mode |= ModeReadHup
+			}
+			if events&EPOLLIN != 0 {
 				mode |= ModeRead
 			}
-			if events&(EPOLLOUT|EPOLLHUP|EPOLLERR) != 0 {
+			if events&EPOLLOUT != 0 {
 				mode |= ModeWrite
 			}
-			if events&(EPOLLCLOSE) != 0 {
+			if events&EPOLLERR != 0 {
+				mode |= ModeErr
+			}
+			if events&EPOLLCLOSED != 0 {
 				mode |= ModeClosed
 			}
 
@@ -36,10 +47,12 @@ func (ep Epoller) Start(desc *Desc, cb CallbackFn) error {
 	)
 }
 
+// Stop implements Poller.Stop() method.
 func (ep Epoller) Stop(desc *Desc) error {
 	return ep.Del(desc.fd())
 }
 
+// Resume implements Poller.Resume() method.
 func (ep Epoller) Resume(desc *Desc) error {
 	return ep.Mod(desc.fd(), modeToEvent(desc.mode))
 }

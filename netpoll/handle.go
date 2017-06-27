@@ -28,16 +28,38 @@ func (h *Desc) fd() int {
 	return int(h.file.Fd())
 }
 
+// Must is a helper that wraps a call to a function returning (*Desc, error).
+// It panics if the error is non-nil and returns desc if not.
+// It is intended for use in short Desc initializations.
+func Must(desc *Desc, err error) *Desc {
+	if err != nil {
+		panic(err)
+	}
+	return desc
+}
+
+// HandleRead creates read descriptor for further use in Poller methods.
+// It is the same as Handle(conn, ModeRead|ModeOneShot).
 func HandleRead(conn net.Conn) (*Desc, error) {
 	return Handle(conn, ModeRead|ModeOneShot)
 }
 
+// HandleWrite creates write descriptor for further use in Poller methods.
+// It is the same as Handle(conn, ModeWrite).
 func HandleWrite(conn net.Conn) (*Desc, error) {
 	return Handle(conn, ModeWrite)
 }
 
-// Handle creates new Handle with given conn and events.
-// Returned handle could be used as argument to Start, Resume and Stop methods.
+// HandleReadWrite creates read and write descriptor for further use in Poller
+// methods.
+// It is the same as Handle(conn, ModeRead|ModeWrite|ModeOneShot).
+func HandleReadWrite(conn net.Conn) (*Desc, error) {
+	return Handle(conn, ModeRead|ModeWrite|ModeOneShot)
+}
+
+// Handle creates new Desc with given conn and mode.
+// Returned descriptor could be used as argument to Start(), Resume() and
+// Stop() methods of some Poller implementation.
 func Handle(conn net.Conn, mode Mode) (*Desc, error) {
 	filer, ok := conn.(Filer)
 	if !ok {

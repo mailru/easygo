@@ -1,6 +1,7 @@
 # Easygo
 
 [![GoDoc][godoc:image]][godoc:url]
+[![Travis][travis:image]][travis:url]
 
 > Tools for building go apps.
 
