@@ -152,19 +152,20 @@ type CallbackFn func(Event)
 
 // Config contains options for Poller configuration.
 type Config struct {
-	OnError func(error)
+	// OnWaitError will be called from goroutine, waiting for events.
+	OnWaitError func(error)
 }
 
 func (c *Config) withDefaults() (config Config) {
 	if c != nil {
 		config = *c
 	}
-	if config.OnError == nil {
-		config.OnError = defaultErrorHandler
+	if config.OnWaitError == nil {
+		config.OnWaitError = defaultOnWaitError
 	}
 	return config
 }
 
-func defaultErrorHandler(err error) {
-	log.Printf("[netpoll] error: %s", err)
+func defaultOnWaitError(err error) {
+	log.Printf("netpoll: wait loop error: %s", err)
 }

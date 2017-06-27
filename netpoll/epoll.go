@@ -66,15 +66,16 @@ type Epoll struct {
 
 // EpollConfig contains options for Epoll instance configuration.
 type EpollConfig struct {
-	OnError func(error)
+	// OnWaitError will be called from goroutine, waiting for events.
+	OnWaitError func(error)
 }
 
 func (c *EpollConfig) withDefaults() (config EpollConfig) {
 	if c != nil {
 		config = *c
 	}
-	if config.OnError == nil {
-		config.OnError = defaultErrorHandler
+	if config.OnWaitError == nil {
+		config.OnWaitError = defaultOnWaitError
 	}
 	return config
 }
@@ -115,7 +116,7 @@ func EpollCreate(c *EpollConfig) (*Epoll, error) {
 	}
 
 	// Run wait loop.
-	go ep.wait(config.OnError)
+	go ep.wait(config.OnWaitError)
 
 	return ep, nil
 }
