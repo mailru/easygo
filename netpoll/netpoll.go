@@ -43,7 +43,6 @@ The Poller describes os-dependent network poller:
 
 Currently, Poller is implemented only for Linux.
 */
-
 package netpoll
 
 import (
