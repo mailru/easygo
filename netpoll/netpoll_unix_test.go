@@ -120,7 +120,7 @@ func socketPair() (r, w int, err error) {
 
 func config(tb testing.TB) *Config {
 	return &Config{
-		OnError: func(err error) {
+		OnWaitError: func(err error) {
 			tb.Fatal(err)
 		},
 	}

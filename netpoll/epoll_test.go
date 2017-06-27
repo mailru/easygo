@@ -221,7 +221,7 @@ func RunEchoServer(tb testing.TB) net.Listener {
 
 func epollConfig(tb testing.TB) *EpollConfig {
 	return &EpollConfig{
-		OnError: func(err error) {
+		OnWaitError: func(err error) {
 			tb.Fatal(err)
 		},
 	}

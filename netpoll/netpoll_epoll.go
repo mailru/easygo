@@ -7,7 +7,7 @@ func New(c *Config) (Poller, error) {
 	cfg := c.withDefaults()
 
 	epoll, err := EpollCreate(&EpollConfig{
-		OnError: cfg.OnError,
+		OnWaitError: cfg.OnWaitError,
 	})
 	if err != nil {
 		return nil, err
