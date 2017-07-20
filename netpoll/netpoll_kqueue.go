@@ -22,8 +22,13 @@ type poller struct {
 
 func (p poller) Start(desc *Desc, cb CallbackFn) error {
 	n, events := toKevents(desc.event, true)
-	return p.Add(desc.fd(), events, n, func(filter KeventFilter, flags KeventFlag) {
-		var event Event
+	return p.Add(desc.fd(), events, n, func(kev Kevent) {
+		var (
+			event Event
+
+			flags  = kev.Flags
+			filter = kev.Filter
+		)
 
 		// Set EventHup for any EOF flag. Below will be more precise detection
 		// of what exatcly HUP occured.
@@ -70,7 +75,7 @@ func (p poller) Resume(desc *Desc) error {
 	return p.Mod(desc.fd(), events, n)
 }
 
-func toKevents(event Event, add bool) (n int, ks [FilterCount]Kevent) {
+func toKevents(event Event, add bool) (n int, ks Kevents) {
 	var flags KeventFlag
 	if add {
 		flags = EV_ADD

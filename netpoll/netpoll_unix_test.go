@@ -67,7 +67,9 @@ func TestPollerReadOnce(t *testing.T) {
 
 		default:
 			received = append(received, bts[:n]...)
-			go poller.Resume(desc)
+			if err := poller.Resume(desc); err != nil {
+				t.Fatalf("poller.Resume() error: %v", err)
+			}
 		}
 	})
 	if err != nil {
@@ -165,7 +167,9 @@ func TestPollerWriteOnce(t *testing.T) {
 		}
 		log.Printf("filled send buffer: %d", filled)
 
-		poller.Resume(desc)
+		if err := poller.Resume(desc); err != nil {
+			t.Fatalf("poller.Resume() error %v", err)
+		}
 	})
 	if err != nil {
 		t.Fatalf("poller.Start(w) error: %v", err)
