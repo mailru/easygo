@@ -13,16 +13,16 @@ func New(c *Config) (Poller, error) {
 		return nil, err
 	}
 
-	return epoller{epoll}, nil
+	return poller{epoll}, nil
 }
 
-// epoller implements Poller interface.
-type epoller struct {
+// poller implements Poller interface.
+type poller struct {
 	*Epoll
 }
 
 // Start implements Poller.Start() method.
-func (ep epoller) Start(desc *Desc, cb CallbackFn) error {
+func (ep poller) Start(desc *Desc, cb CallbackFn) error {
 	return ep.Add(desc.fd(), toEpollEvent(desc.event),
 		func(ep EpollEvent) {
 			var event Event
@@ -42,8 +42,8 @@ func (ep epoller) Start(desc *Desc, cb CallbackFn) error {
 			if ep&EPOLLERR != 0 {
 				event |= EventErr
 			}
-			if ep&EPOLLCLOSED != 0 {
-				event |= EventClosed
+			if ep&_EPOLLCLOSED != 0 {
+				event |= EventPollerClosed
 			}
 
 			cb(event)
@@ -52,12 +52,12 @@ func (ep epoller) Start(desc *Desc, cb CallbackFn) error {
 }
 
 // Stop implements Poller.Stop() method.
-func (ep epoller) Stop(desc *Desc) error {
+func (ep poller) Stop(desc *Desc) error {
 	return ep.Del(desc.fd())
 }
 
 // Resume implements Poller.Resume() method.
-func (ep epoller) Resume(desc *Desc) error {
+func (ep poller) Resume(desc *Desc) error {
 	return ep.Mod(desc.fd(), toEpollEvent(desc.event))
 }
 
