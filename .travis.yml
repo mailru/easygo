@@ -2,12 +2,10 @@ language: go
 
 os:
   - linux
-#  - osx
+  - osx
 
 go:
-  - 1.7
   - 1.8
-  - master
 
 install:
   - go get golang.org/x/sys/unix

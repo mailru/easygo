@@ -88,7 +88,7 @@ func TestEpollServer(t *testing.T) {
 	// Add listener fd to epoll instance to know when there are new incoming
 	// connections.
 	ep.Add(ln, EPOLLIN, func(evt EpollEvent) {
-		if evt&EPOLLCLOSED != 0 {
+		if evt&_EPOLLCLOSED != 0 {
 			return
 		}
 
@@ -106,7 +106,7 @@ func TestEpollServer(t *testing.T) {
 		ep.Add(conn, EPOLLIN|EPOLLET|EPOLLHUP|EPOLLRDHUP, func(evt EpollEvent) {
 			// If EPOLLRDHUP is supported, it will be triggered after conn
 			// close() or shutdown(). In older versions EPOLLHUP is triggered.
-			if evt&EPOLLCLOSED != 0 {
+			if evt&_EPOLLCLOSED != 0 {
 				return
 			}
 

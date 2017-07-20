@@ -44,10 +44,22 @@ func HandleRead(conn net.Conn) (*Desc, error) {
 	return Handle(conn, EventRead|EventEdgeTriggered)
 }
 
+// HandleReadOnce creates read descriptor for further use in Poller methods.
+// It is the same as Handle(conn, EventRead|EventOneShot).
+func HandleReadOnce(conn net.Conn) (*Desc, error) {
+	return Handle(conn, EventRead|EventOneShot)
+}
+
 // HandleWrite creates write descriptor for further use in Poller methods.
-// It is the same as Handle(conn, EventWrite).
+// It is the same as Handle(conn, EventWrite|EventEdgeTriggered).
 func HandleWrite(conn net.Conn) (*Desc, error) {
-	return Handle(conn, EventWrite)
+	return Handle(conn, EventWrite|EventEdgeTriggered)
+}
+
+// HandleWriteOnce creates write descriptor for further use in Poller methods.
+// It is the same as Handle(conn, EventWrite|EventOneShot).
+func HandleWriteOnce(conn net.Conn) (*Desc, error) {
+	return Handle(conn, EventWrite|EventOneShot)
 }
 
 // HandleReadWrite creates read and write descriptor for further use in Poller
