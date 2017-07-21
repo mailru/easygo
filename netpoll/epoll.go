@@ -13,14 +13,14 @@ type EpollEvent uint32
 
 // EpollEvents that are mapped to epoll_event.events possible values.
 const (
-	EPOLLIN      EpollEvent = unix.EPOLLIN
-	EPOLLOUT                = unix.EPOLLOUT
-	EPOLLRDHUP              = unix.EPOLLRDHUP
-	EPOLLPRI                = unix.EPOLLPRI
-	EPOLLERR                = unix.EPOLLERR
-	EPOLLHUP                = unix.EPOLLHUP
-	EPOLLET                 = unix.EPOLLET
-	EPOLLONESHOT            = unix.EPOLLONESHOT
+	EPOLLIN      = unix.EPOLLIN
+	EPOLLOUT     = unix.EPOLLOUT
+	EPOLLRDHUP   = unix.EPOLLRDHUP
+	EPOLLPRI     = unix.EPOLLPRI
+	EPOLLERR     = unix.EPOLLERR
+	EPOLLHUP     = unix.EPOLLHUP
+	EPOLLET      = unix.EPOLLET
+	EPOLLONESHOT = unix.EPOLLONESHOT
 
 	// _EPOLLCLOSED is a special EpollEvent value the receipt of which means
 	// that the epoll instance is closed.

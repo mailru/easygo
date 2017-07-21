@@ -43,7 +43,7 @@ const (
 	// EVFILT_READ takes a descriptor as the identifier, and returns whenever
 	// there is data available to read. The behavior of the filter is slightly
 	// different depending on the descriptor type.
-	EVFILT_READ KeventFilter = unix.EVFILT_READ
+	EVFILT_READ = unix.EVFILT_READ
 
 	// EVFILT_WRITE takes a descriptor as the identifier, and returns whenever
 	// it is possible to write to the descriptor. For sockets, pipes and fifos,
@@ -139,7 +139,7 @@ const (
 	// the parameters of the original event, and not result in a duplicate
 	// entry. Adding an event automatically enables it, unless overridden by
 	// the EV_DISABLE flag.
-	EV_ADD KeventFlag = unix.EV_ADD
+	EV_ADD = unix.EV_ADD
 
 	// EV_ENABLE permits kevent() to return the event if it is triggered.
 	EV_ENABLE = unix.EV_ENABLE
