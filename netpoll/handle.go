@@ -19,7 +19,12 @@ type Desc struct {
 	event Event
 }
 
-// Close closes underlying resources.
+// NewDesc creates descriptor from custom fd.
+func NewDesc(fd uintptr, ev Event) *Desc {
+	return &Desc{os.NewFile(fd, ""), ev}
+}
+
+// Close closes underlying file.
 func (h *Desc) Close() error {
 	return h.file.Close()
 }
@@ -73,13 +78,7 @@ func HandleReadWrite(conn net.Conn) (*Desc, error) {
 // Returned descriptor could be used as argument to Start(), Resume() and
 // Stop() methods of some Poller implementation.
 func Handle(conn net.Conn, event Event) (*Desc, error) {
-	f, ok := conn.(filer)
-	if !ok {
-		return nil, ErrNotFiler
-	}
-
-	// Get a copy of fd.
-	file, err := f.File()
+	desc, err := handle(conn, event)
 	if err != nil {
 		return nil, err
 	}
@@ -90,8 +89,28 @@ func Handle(conn net.Conn, event Event) (*Desc, error) {
 	//
 	// See https://golang.org/pkg/net/#TCPConn.File
 	// See /usr/local/go/src/net/net.go: conn.File()
-	if err = syscall.SetNonblock(int(file.Fd()), true); err != nil {
+	if err = syscall.SetNonblock(desc.fd(), true); err != nil {
 		return nil, os.NewSyscallError("setnonblock", err)
+	}
+
+	return desc, nil
+}
+
+// HandleListener returns descriptor for a net.Listener.
+func HandleListener(ln net.Listener, event Event) (*Desc, error) {
+	return handle(ln, event)
+}
+
+func handle(x interface{}, event Event) (*Desc, error) {
+	f, ok := x.(filer)
+	if !ok {
+		return nil, ErrNotFiler
+	}
+
+	// Get a copy of fd.
+	file, err := f.File()
+	if err != nil {
+		return nil, err
 	}
 
 	return &Desc{
