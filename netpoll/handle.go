@@ -3,7 +3,6 @@ package netpoll
 import (
 	"net"
 	"os"
-	"syscall"
 )
 
 // filer describes an object that has ability to return os.File.
@@ -89,7 +88,7 @@ func Handle(conn net.Conn, event Event) (*Desc, error) {
 	//
 	// See https://golang.org/pkg/net/#TCPConn.File
 	// See /usr/local/go/src/net/net.go: conn.File()
-	if err = syscall.SetNonblock(desc.fd(), true); err != nil {
+	if err = setNonblock(desc.fd(), true); err != nil {
 		return nil, os.NewSyscallError("setnonblock", err)
 	}
 
