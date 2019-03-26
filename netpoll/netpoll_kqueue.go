@@ -22,7 +22,7 @@ type poller struct {
 
 func (p poller) Start(desc *Desc, cb CallbackFn) error {
 	n, events := toKevents(desc.event, true)
-  err := p.Add(desc.fd(), events, n, func(kev Kevent) {
+	err := p.Add(desc.fd(), events, n, func(kev Kevent) {
 		var (
 			event Event
 
@@ -57,8 +57,8 @@ func (p poller) Start(desc *Desc, cb CallbackFn) error {
 
 		cb(event)
 	})
-  setNonblock(desc.fd())
-  return err
+	setNonblock(desc.fd(), true)
+	return err
 }
 
 func (p poller) Stop(desc *Desc) error {
