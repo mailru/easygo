@@ -23,7 +23,7 @@ type poller struct {
 
 // Start implements Poller.Start() method.
 func (ep poller) Start(desc *Desc, cb CallbackFn) error {
-	return ep.Add(desc.fd(), toEpollEvent(desc.event),
+	err := ep.Add(desc.fd(), toEpollEvent(desc.event),
 		func(ep EpollEvent) {
 			var event Event
 
@@ -49,6 +49,8 @@ func (ep poller) Start(desc *Desc, cb CallbackFn) error {
 			cb(event)
 		},
 	)
+	setNonblock(desc.fd(), true)
+	return err
 }
 
 // Stop implements Poller.Stop() method.
