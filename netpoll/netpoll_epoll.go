@@ -2,6 +2,10 @@
 
 package netpoll
 
+import (
+	"os"
+)
+
 // New creates new epoll-based Poller instance with given config.
 func New(c *Config) (Poller, error) {
 	cfg := c.withDefaults()
@@ -23,7 +27,7 @@ type poller struct {
 
 // Start implements Poller.Start() method.
 func (ep poller) Start(desc *Desc, cb CallbackFn) error {
-	return ep.Add(desc.fd(), toEpollEvent(desc.event),
+	err := ep.Add(desc.fd(), toEpollEvent(desc.event),
 		func(ep EpollEvent) {
 			var event Event
 
@@ -49,6 +53,12 @@ func (ep poller) Start(desc *Desc, cb CallbackFn) error {
 			cb(event)
 		},
 	)
+	if err == nil {
+		if err = setNonblock(desc.fd(), true); err != nil {
+			return os.NewSyscallError("setnonblock", err)
+		}
+	}
+	return err
 }
 
 // Stop implements Poller.Stop() method.

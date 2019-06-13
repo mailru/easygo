@@ -3,7 +3,6 @@ package netpoll
 import (
 	"net"
 	"os"
-	"syscall"
 )
 
 // filer describes an object that has ability to return os.File.
@@ -15,22 +14,22 @@ type filer interface {
 // Desc is a network connection within netpoll descriptor.
 // It's methods are not goroutine safe.
 type Desc struct {
-	pfd    int
+	file  *os.File
 	event Event
 }
 
 // NewDesc creates descriptor from custom fd.
 func NewDesc(fd uintptr, ev Event) *Desc {
-	return &Desc{int(fd), ev}
+	return &Desc{os.NewFile(fd, ""), ev}
 }
 
 // Close closes underlying file.
 func (h *Desc) Close() error {
-	return syscall.Close(h.pfd)
+	return h.file.Close()
 }
 
 func (h *Desc) fd() int {
-	return h.pfd
+	return int(h.file.Fd())
 }
 
 // Must is a helper that wraps a call to a function returning (*Desc, error).
@@ -83,6 +82,16 @@ func Handle(conn net.Conn, event Event) (*Desc, error) {
 		return nil, err
 	}
 
+	// Set the file back to non blocking mode since conn.File() sets underlying
+	// os.File to blocking mode. This is useful to get conn.Set{Read}Deadline
+	// methods still working on source Conn.
+	//
+	// See https://golang.org/pkg/net/#TCPConn.File
+	// See /usr/local/go/src/net/net.go: conn.File()
+	if err = setNonblock(desc.fd(), true); err != nil {
+		return nil, os.NewSyscallError("setnonblock", err)
+	}
+
 	return desc, nil
 }
 
@@ -103,22 +112,8 @@ func handle(x interface{}, event Event) (*Desc, error) {
 		return nil, err
 	}
 
-	fd := int(file.Fd())
-
-	// *os.File.Fd() sets underlying os.File to blocking mode in unix systems.
-	// Set the file back to non blocking mode
-	// This is useful to get conn.Set{Read}Deadline
-	// methods still working on source Conn.
-	//
-	// See https://golang.org/pkg/net/#TCPConn.File
-	// See /usr/local/go/src/net/net.go: conn.File()
-	// See https://golang.org/pkg/os/#File.Fd
-	if err = setNonblock(fd, true); err != nil {
-		return nil, os.NewSyscallError("setnonblock", err)
-	}
-
 	return &Desc{
-		pfd:  fd,
+		file:  file,
 		event: event,
 	}, nil
 }
