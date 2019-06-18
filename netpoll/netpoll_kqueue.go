@@ -2,6 +2,10 @@
 
 package netpoll
 
+import (
+	"os"
+)
+
 // New creates new kqueue-based Poller instance with given config.
 func New(c *Config) (Poller, error) {
 	cfg := c.withDefaults()
@@ -22,7 +26,7 @@ type poller struct {
 
 func (p poller) Start(desc *Desc, cb CallbackFn) error {
 	n, events := toKevents(desc.event, true)
-	return p.Add(desc.fd(), events, n, func(kev Kevent) {
+	err := p.Add(desc.fd(), events, n, func(kev Kevent) {
 		var (
 			event Event
 
@@ -57,6 +61,12 @@ func (p poller) Start(desc *Desc, cb CallbackFn) error {
 
 		cb(event)
 	})
+	if err == nil {
+		if err = setNonblock(desc.fd(), true); err != nil {
+			return os.NewSyscallError("setnonblock", err)
+		}
+	}
+	return err
 }
 
 func (p poller) Stop(desc *Desc) error {
