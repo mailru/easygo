@@ -19,7 +19,7 @@ type Desc struct {
 	fd    int
 }
 
-// NewDesc creates descriptor from custom Fd.
+// NewDesc creates descriptor from custom fd.
 func NewDesc(fd uintptr, ev Event) *Desc {
 	return &Desc{file: os.NewFile(fd, ""), event: ev, fd: int(fd)}
 }
@@ -117,7 +117,7 @@ func handle(x interface{}, event Event) (*Desc, error) {
 		return nil, ErrNotFiler
 	}
 
-	// Get a copy of Fd.
+	// Get a copy of fd.
 	file, err := f.File()
 	if err != nil {
 		return nil, err

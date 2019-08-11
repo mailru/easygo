@@ -286,7 +286,7 @@ func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
 	return err
 }
 
-// Mod modifies events registered for Fd.
+// Mod modifies events registered for fd.
 func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	var kevs [filterCount]unix.Kevent_t
 	for i := 0; i < n; i++ {
@@ -316,8 +316,8 @@ func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	return err
 }
 
-// Del removes callback for Fd. Note that it does not cleanups events for Fd in
-// kqueue. You should close Fd or call Mod() with EV_DELETE flag set.
+// Del removes callback for fd. Note that it does not cleanups events for Fd in
+// kqueue. You should close fd or call Mod() with EV_DELETE flag set.
 func (k *Kqueue) Del(fd int) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
