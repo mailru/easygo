@@ -255,7 +255,7 @@ func (k *Kqueue) Close() error {
 	return nil
 }
 
-// Add adds a event handler for identifier Fd with given n events.
+// Add adds a event handler for identifier fd with given n events.
 func (k *Kqueue) Add(fd int, events Kevents, n int, cb KeventHandler) error {
 	var kevs [filterCount]unix.Kevent_t
 	for i := 0; i < n; i++ {
@@ -316,7 +316,7 @@ func (k *Kqueue) Mod(fd int, events Kevents, n int) error {
 	return err
 }
 
-// Del removes callback for fd. Note that it does not cleanups events for Fd in
+// Del removes callback for fd. Note that it does not cleanups events for fd in
 // kqueue. You should close fd or call Mod() with EV_DELETE flag set.
 func (k *Kqueue) Del(fd int) error {
 	k.mu.Lock()

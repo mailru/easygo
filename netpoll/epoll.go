@@ -166,7 +166,7 @@ func (ep *Epoll) Close() (err error) {
 	return
 }
 
-// Add adds Fd to epoll set with given events.
+// Add adds fd to epoll set with given events.
 // Callback will be called on each received event from epoll.
 // Note that _EPOLLCLOSED is triggered for every cb when epoll closed.
 func (ep *Epoll) Add(fd int, events EpollEvent, cb func(EpollEvent)) (err error) {
@@ -189,7 +189,7 @@ func (ep *Epoll) Add(fd int, events EpollEvent, cb func(EpollEvent)) (err error)
 	return unix.EpollCtl(ep.fd, unix.EPOLL_CTL_ADD, fd, ev)
 }
 
-// Del removes Fd from epoll set.
+// Del removes fd from epoll set.
 func (ep *Epoll) Del(fd int) (err error) {
 	ep.mu.Lock()
 	defer ep.mu.Unlock()
