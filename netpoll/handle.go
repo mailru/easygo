@@ -18,7 +18,7 @@ type Desc struct {
 	event Event
 }
 
-// NewDesc creates descriptor from custom fd.
+// NewDesc creates descriptor from custom Fd.
 func NewDesc(fd uintptr, ev Event) *Desc {
 	return &Desc{os.NewFile(fd, ""), ev}
 }
@@ -28,7 +28,7 @@ func (h *Desc) Close() error {
 	return h.file.Close()
 }
 
-func (h *Desc) fd() int {
+func (h *Desc) Fd() int {
 	return int(h.file.Fd())
 }
 
@@ -88,7 +88,7 @@ func Handle(conn net.Conn, event Event) (*Desc, error) {
 	//
 	// See https://golang.org/pkg/net/#TCPConn.File
 	// See /usr/local/go/src/net/net.go: conn.File()
-	if err = setNonblock(desc.fd(), true); err != nil {
+	if err = setNonblock(desc.Fd(), true); err != nil {
 		return nil, os.NewSyscallError("setnonblock", err)
 	}
 
@@ -106,7 +106,7 @@ func handle(x interface{}, event Event) (*Desc, error) {
 		return nil, ErrNotFiler
 	}
 
-	// Get a copy of fd.
+	// Get a copy of Fd.
 	file, err := f.File()
 	if err != nil {
 		return nil, err

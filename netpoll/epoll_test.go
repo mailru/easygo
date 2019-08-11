@@ -85,7 +85,7 @@ func TestEpollServer(t *testing.T) {
 	var received bytes.Buffer
 	done := make(chan struct{})
 
-	// Add listener fd to epoll instance to know when there are new incoming
+	// Add listener Fd to epoll instance to know when there are new incoming
 	// connections.
 	ep.Add(ln, EPOLLIN, func(evt EpollEvent) {
 		if evt&_EPOLLCLOSED != 0 {
@@ -101,7 +101,7 @@ func TestEpollServer(t *testing.T) {
 		// Socket must not block read() from it.
 		unix.SetNonblock(conn, true)
 
-		// Add connection fd to epoll instance to get notifications about
+		// Add connection Fd to epoll instance to get notifications about
 		// available data.
 		ep.Add(conn, EPOLLIN|EPOLLET|EPOLLHUP|EPOLLRDHUP, func(evt EpollEvent) {
 			// If EPOLLRDHUP is supported, it will be triggered after conn

@@ -27,7 +27,7 @@ type poller struct {
 
 // Start implements Poller.Start() method.
 func (ep poller) Start(desc *Desc, cb CallbackFn) error {
-	err := ep.Add(desc.fd(), toEpollEvent(desc.event),
+	err := ep.Add(desc.Fd(), toEpollEvent(desc.event),
 		func(ep EpollEvent) {
 			var event Event
 
@@ -54,7 +54,7 @@ func (ep poller) Start(desc *Desc, cb CallbackFn) error {
 		},
 	)
 	if err == nil {
-		if err = setNonblock(desc.fd(), true); err != nil {
+		if err = setNonblock(desc.Fd(), true); err != nil {
 			return os.NewSyscallError("setnonblock", err)
 		}
 	}
@@ -63,12 +63,12 @@ func (ep poller) Start(desc *Desc, cb CallbackFn) error {
 
 // Stop implements Poller.Stop() method.
 func (ep poller) Stop(desc *Desc) error {
-	return ep.Del(desc.fd())
+	return ep.Del(desc.Fd())
 }
 
 // Resume implements Poller.Resume() method.
 func (ep poller) Resume(desc *Desc) error {
-	return ep.Mod(desc.fd(), toEpollEvent(desc.event))
+	return ep.Mod(desc.Fd(), toEpollEvent(desc.event))
 }
 
 func toEpollEvent(event Event) (ep EpollEvent) {
