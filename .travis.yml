@@ -5,4 +5,4 @@ os:
   - osx
 
 go:
-  - 1.13
+  - stable
