@@ -191,7 +191,7 @@ type Kevent struct {
 	Filter KeventFilter
 	Flags  KeventFlag
 	Fflags uint32
-	Data   int64
+	Data   int
 }
 
 // Kevents is a fixed number of pairs of event filter and flags which can be
@@ -378,7 +378,7 @@ func (k *Kqueue) wait(onError func(error)) {
 				cb(Kevent{
 					Filter: KeventFilter(e.Filter),
 					Flags:  KeventFlag(e.Flags),
-					Data:   e.Data,
+					Data:   int(e.Data),
 					Fflags: e.Fflags,
 				})
 				cbs[i] = nil
@@ -389,13 +389,5 @@ func (k *Kqueue) wait(onError func(error)) {
 			evs = make([]unix.Kevent_t, n*2)
 			cbs = make([]KeventHandler, n*2)
 		}
-	}
-}
-
-func evGet(fd int, filter KeventFilter, flags KeventFlag) unix.Kevent_t {
-	return unix.Kevent_t{
-		Ident:  uint64(fd),
-		Filter: int16(filter),
-		Flags:  uint16(flags),
 	}
 }

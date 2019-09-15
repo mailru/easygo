@@ -5,7 +5,4 @@ os:
   - osx
 
 go:
-  - 1.8
-
-install:
-  - go get golang.org/x/sys/unix
+  - stable
