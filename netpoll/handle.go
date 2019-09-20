@@ -24,7 +24,7 @@ func NewDesc(fd uintptr, ev Event) *Desc {
 	return &Desc{file: os.NewFile(fd, ""), event: ev, fd: int(fd)}
 }
 
-// NewDescFile creates descriptor from os.File
+// NewDescFile creates descriptor from os.File.
 func NewDescFile(file *os.File, ev Event) *Desc {
 	return &Desc{file: file, event: ev, fd: -1}
 }
@@ -34,7 +34,7 @@ func (h *Desc) Close() error {
 	return h.file.Close()
 }
 
-// Fd returns the underlying file descriptor
+// Fd returns the underlying file descriptor.
 func (h *Desc) Fd() int {
 	if h.fd == -1 {
 		h.fd = int(h.file.Fd())
