@@ -158,6 +158,9 @@ type Poller interface {
 	// Note that if there no need to observe desc anymore, you should call
 	// Stop() to prevent memory leaks.
 	Resume(*Desc) error
+
+	// Close stops Poller instance.
+	Close() error
 }
 
 // CallbackFn is a function that will be called on kernel i/o event
